@@ -1,6 +1,11 @@
-Apartments = {}
+Apartments = Apartments or {}
+
+Apartments.DrawText = 'jg' -- supported: 'qb', 'ox', or 'jg'
+
 Apartments.Starting = true
+
 Apartments.SpawnOffset = 30
+
 Apartments.Locations = {
     ["apartment1"] = {
         name = "apartment1",

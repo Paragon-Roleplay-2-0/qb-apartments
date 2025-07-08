@@ -1,4 +1,9 @@
+---@diagnostic disable: lowercase-global
+
+if not lib.checkDependency('ox_lib', '3.30.0', true) then return end
+
 local ApartmentObjects = {}
+
 local QBCore = exports['qb-core']:GetCoreObject()
 
 -- Functions
@@ -27,6 +32,13 @@ local function GetApartmentInfo(apartmentId)
 end
 
 -- Events
+
+if GetResourceState('ox_inventory') == 'started' then
+    ox_inventory = exports.ox_inventory
+    RegisterNetEvent('qb-apartments:server:RegisterStash', function(currentApartmentId, currentApartmentLabel)
+        ox_inventory:RegisterStash(currentApartmentId, currentApartmentLabel and 'Stash - ' .. currentApartmentLabel .. ' Apartment' or 'Apartment Stash', 100, 1000000, true)
+    end)
+end
 
 RegisterNetEvent('qb-apartments:server:SetInsideMeta', function(house, insideId, bool, isVisiting)
     local src = source
@@ -87,7 +99,13 @@ RegisterNetEvent('apartments:server:UpdateApartment', function(type, label)
     local Player = QBCore.Functions.GetPlayer(src)
     MySQL.update('UPDATE apartments SET type = ?, label = ? WHERE citizenid = ?', { type, label, Player.PlayerData.citizenid })
     TriggerClientEvent('QBCore:Notify', src, Lang:t('success.changed_apart'))
-    TriggerClientEvent('apartments:client:SetHomeBlip', src, type)
+    TriggerClientEvent("apartments:client:SetHomeBlip", src, type)
+    if ox_inventory then
+        local result = MySQL.query.await('SELECT * FROM apartments WHERE citizenid = ?', { Player.PlayerData.citizenid })
+        if result[1] ~= nil then
+            TriggerEvent('qb-apartments:server:RegisterStash', result[1].name, label) -- rename the stash name in case of apartment change
+        end
+    end
 end)
 
 RegisterNetEvent('apartments:server:RingDoor', function(apartmentId, apartment)

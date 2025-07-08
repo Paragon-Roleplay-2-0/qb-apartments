@@ -1,3 +1,5 @@
+if not lib.checkDependency('ox_lib', '3.30.0', true) then return end
+
 local QBCore = exports['qb-core']:GetCoreObject()
 local UseTarget = GetConvar('UseTarget', 'false') == 'true'
 local InApartment = false
@@ -20,76 +22,78 @@ local IsInsideStashZone = false
 local IsInsideOutfitsZone = false
 local IsInsideLogoutZone = false
 
+-- ox_inventory compatibility
+local ox_inventory = nil
+
+if GetResourceState('ox_inventory') == 'started' then
+    ox_inventory = exports.ox_inventory
+end
+
 -- polyzone integration
 
 local function OpenEntranceMenu()
-    local headerMenu = {}
-
+    local menuOptions = {}
     if IsOwned then
-        headerMenu[#headerMenu + 1] = {
-            header = Lang:t('text.enter'),
-            params = {
-                event = 'apartments:client:EnterApartment',
-                args = {}
-            }
+        menuOptions[#menuOptions + 1] = {
+            title = Lang:t('text.enter'),
+            icon = 'fa-solid fa-building-user',
+            iconColor = 'white',
+            event = 'apartments:client:EnterApartment',
+            args = {}
         }
     elseif not IsOwned then
-        headerMenu[#headerMenu + 1] = {
-            header = Lang:t('text.move_here'),
-            params = {
-                event = 'apartments:client:UpdateApartment',
-                args = {}
-            }
+        menuOptions[#menuOptions + 1] = {
+            title = Lang:t('text.move_here'),
+            icon = 'fa-solid fa-building',
+            iconColor = 'white',
+            event = 'apartments:client:UpdateApartment',
+            args = {}
         }
     end
 
-    headerMenu[#headerMenu + 1] = {
-        header = Lang:t('text.ring_doorbell'),
-        params = {
-            event = 'apartments:client:DoorbellMenu',
-            args = {}
-        }
+    menuOptions[#menuOptions + 1] = {
+        title = Lang:t('text.ring_doorbell'),
+        icon = 'fa-solid fa-bell',
+        iconColor = 'white',
+        arrow = true,
+        event = 'apartments:client:DoorbellMenu',
+        args = {}
     }
 
-    headerMenu[#headerMenu + 1] = {
-        header = Lang:t('text.close_menu'),
-        txt = '',
-        params = {
-            event = 'qb-menu:client:closeMenu'
-        }
-    }
+    lib.registerContext({
+        id = 'entrance_menu',
+        title = 'Apartment Entrance',
+        canClose = true,
+        options = menuOptions
+    })
 
-    exports['qb-menu']:openMenu(headerMenu)
+    lib.showContext('entrance_menu')
 end
 
 local function OpenExitMenu()
-    local headerMenu = {}
-
-    headerMenu[#headerMenu + 1] = {
-        header = Lang:t('text.open_door'),
-        params = {
-            event = 'apartments:client:OpenDoor',
-            args = {}
+    lib.registerContext({
+        id = 'exit_menu',
+        title = 'Apartment Exit',
+        canClose = true,
+        options = {
+            {
+                title = Lang:t('text.open_door'),
+                icon = 'fa-solid fa-door-open',
+                iconColor = 'white',
+                event = 'apartments:client:OpenDoor',
+                args = {}
+            },
+            {
+                title = Lang:t('text.leave'),
+                icon = 'fa-solid fa-right-from-bracket',
+                iconColor = 'white',
+                event = 'apartments:client:LeaveApartment',
+                args = {}
+            }
         }
-    }
+    })
 
-    headerMenu[#headerMenu + 1] = {
-        header = Lang:t('text.leave'),
-        params = {
-            event = 'apartments:client:LeaveApartment',
-            args = {}
-        }
-    }
-
-    headerMenu[#headerMenu + 1] = {
-        header = Lang:t('text.close_menu'),
-        txt = '',
-        params = {
-            event = 'qb-menu:client:closeMenu'
-        }
-    }
-
-    exports['qb-menu']:openMenu(headerMenu)
+    lib.showContext('exit_menu')
 end
 
 -- exterior entrance (polyzone)
@@ -113,9 +117,21 @@ local function RegisterApartmentEntranceZone(apartmentID, apartmentData)
 
     zone:onPlayerInOut(function(isPointInside)
         if isPointInside and not InApartment then
-            exports['qb-core']:DrawText(Lang:t('text.options'), 'left')
+            if Apartments.DrawText == 'qb' then
+                exports['qb-core']:DrawText(Lang:t('text.options'), 'left')
+            elseif Apartments.DrawText == 'ox' then
+                lib.showTextUI(Lang:t('text.options'), { position = 'left-center' })
+            elseif Apartments.DrawText == 'jg' then
+                exports['jg-textui']:DrawText(Lang:t('text.options'))
+            end
         else
-            exports['qb-core']:HideText()
+            if Apartments.DrawText == 'qb' then
+                exports['qb-core']:HideText()
+            elseif Apartments.DrawText == 'ox' then
+                lib.hideTextUI()
+            elseif Apartments.DrawText == 'jg' then
+                exports['jg-textui']:HideText()
+            end
         end
         IsInsideEntranceZone = isPointInside
     end)
@@ -141,7 +157,7 @@ local function RegisterApartmentEntranceTarget(apartmentID, apartmentData)
             {
                 type = 'client',
                 event = 'apartments:client:EnterApartment',
-                icon = 'fas fa-door-open',
+                icon = 'fa-solid fa-building-user',
                 label = Lang:t('text.enter'),
             },
         }
@@ -150,7 +166,7 @@ local function RegisterApartmentEntranceTarget(apartmentID, apartmentData)
             {
                 type = 'client',
                 event = 'apartments:client:UpdateApartment',
-                icon = 'fas fa-hotel',
+                icon = 'fa-solid fa-building',
                 label = Lang:t('text.move_here'),
             }
         }
@@ -158,7 +174,7 @@ local function RegisterApartmentEntranceTarget(apartmentID, apartmentData)
     options[#options + 1] = {
         type = 'client',
         event = 'apartments:client:DoorbellMenu',
-        icon = 'fas fa-concierge-bell',
+        icon = 'fa-solid fa-bell',
         label = Lang:t('text.ring_doorbell'),
     }
 
@@ -201,9 +217,21 @@ local function RegisterInApartmentZone(targetKey, coords, heading, text)
 
     zone:onPlayerInOut(function(isPointInside)
         if isPointInside and text then
-            exports['qb-core']:DrawText(text, 'left')
+            if Apartments.DrawText == 'qb' then
+                exports['qb-core']:DrawText(text, 'left')
+            elseif Apartments.DrawText == 'ox' then
+                lib.showTextUI(text, { position = 'left-center' })
+            elseif Apartments.DrawText == 'jg' then
+                exports['jg-textui']:DrawText(text)
+            end
         else
-            exports['qb-core']:HideText()
+            if Apartments.DrawText == 'qb' then
+                exports['qb-core']:HideText()
+            elseif Apartments.DrawText == 'ox' then
+                lib.hideTextUI()
+            elseif Apartments.DrawText == 'jg' then
+                exports['jg-textui']:HideText()
+            end
         end
 
         if targetKey == 'entrancePos' then
@@ -287,13 +315,13 @@ local function SetInApartmentTargets()
             {
                 type = 'client',
                 event = 'apartments:client:OpenDoor',
-                icon = 'fas fa-door-open',
+                icon = 'fa-solid fa-door-open',
                 label = Lang:t('text.open_door'),
             },
             {
                 type = 'client',
                 event = 'apartments:client:LeaveApartment',
-                icon = 'fas fa-door-open',
+                icon = 'fa-solid fa-right-from-bracket',
                 label = Lang:t('text.leave'),
             },
         })
@@ -495,42 +523,34 @@ function MenuOwners()
             QBCore.Functions.Notify(Lang:t('error.nobody_home'), 'error', 3500)
             CloseMenuFull()
         else
-            local apartmentMenu = {
-                {
-                    header = Lang:t('text.tennants'),
-                    isMenuHeader = true
-                }
-            }
-
+            local menuOptions = {}
             for k, v in pairs(apartments) do
-                apartmentMenu[#apartmentMenu + 1] = {
-                    header = v,
-                    txt = '',
-                    params = {
-                        event = 'apartments:client:RingMenu',
-                        args = {
-                            apartmentId = k
-                        }
+                menuOptions[#menuOptions + 1] = {
+                    title = v,
+                    icon = 'fa-solid fa-user',
+                    iconColor = 'white',
+                    description = '',
+                    event = 'apartments:client:RingMenu',
+                    args = {
+                        apartmentId = k
                     }
-
                 }
             end
 
-            apartmentMenu[#apartmentMenu + 1] = {
-                header = Lang:t('text.close_menu'),
-                txt = '',
-                params = {
-                    event = 'qb-menu:client:closeMenu'
-                }
+            lib.registerContext({
+                id = 'owners_menu',
+                title = Lang:t('text.tennants'),
+                canClose = true,
+                options = menuOptions
+            })
 
-            }
-            exports['qb-menu']:openMenu(apartmentMenu)
+            lib.showContext('owners_menu')
         end
     end, ClosestHouse)
 end
 
 function CloseMenuFull()
-    exports['qb-menu']:closeMenu()
+    lib.hideContext()
 end
 
 -- Event Handlers
@@ -557,7 +577,6 @@ AddEventHandler('onResourceStop', function(resource)
         DeleteInApartmentTargets()
     end
 end)
-
 
 -- Events
 
@@ -690,7 +709,14 @@ end)
 RegisterNetEvent('apartments:client:OpenStash', function()
     if CurrentApartment then
         TriggerServerEvent('InteractSound_SV:PlayOnSource', 'StashOpen', 0.4)
-        TriggerServerEvent('apartments:server:openStash', CurrentApartment)
+        if not ox_inventory then
+            TriggerServerEvent('apartments:server:openStash', CurrentApartment)
+        else
+            if not ox_inventory:openInventory('stash', CurrentApartment) then
+                TriggerServerEvent('qb-apartments:server:RegisterStash', CurrentApartment, Apartments.Locations[ClosestHouse].label)
+                ox_inventory:openInventory('stash', CurrentApartment)
+            end
+        end
     end
 end)
 
@@ -702,7 +728,6 @@ end)
 RegisterNetEvent('apartments:client:Logout', function()
     TriggerServerEvent('qb-houses:server:LogoutLocation')
 end)
-
 
 -- Threads
 
@@ -745,7 +770,13 @@ else
                     sleep = 0
                     if IsControlJustPressed(0, 38) then
                         OpenEntranceMenu()
-                        exports['qb-core']:HideText()
+                        if Apartments.DrawText == 'qb' then
+                            exports['qb-core']:HideText()
+                        elseif Apartments.DrawText == 'ox' then
+                            lib.hideTextUI()
+                        elseif Apartments.DrawText == 'jg' then
+                            exports['jg-textui']:HideText()
+                        end
                     end
                 end
             elseif InApartment then
@@ -756,28 +787,52 @@ else
                 if IsInsideExitZone then
                     if IsControlJustPressed(0, 38) then
                         OpenExitMenu()
-                        exports['qb-core']:HideText()
+                        if Apartments.DrawText == 'qb' then
+                            exports['qb-core']:HideText()
+                        elseif Apartments.DrawText == 'ox' then
+                            lib.hideTextUI()
+                        elseif Apartments.DrawText == 'jg' then
+                            exports['jg-textui']:HideText()
+                        end
                     end
                 end
 
                 if IsInsideStashZone then
                     if IsControlJustPressed(0, 38) then
                         TriggerEvent('apartments:client:OpenStash')
-                        exports['qb-core']:HideText()
+                        if Apartments.DrawText == 'qb' then
+                            exports['qb-core']:HideText()
+                        elseif Apartments.DrawText == 'ox' then
+                            lib.hideTextUI()
+                        elseif Apartments.DrawText == 'jg' then
+                            exports['jg-textui']:HideText()
+                        end
                     end
                 end
 
                 if IsInsideOutfitsZone then
                     if IsControlJustPressed(0, 38) then
                         TriggerEvent('apartments:client:ChangeOutfit')
-                        exports['qb-core']:HideText()
+                        if Apartments.DrawText == 'qb' then
+                            exports['qb-core']:HideText()
+                        elseif Apartments.DrawText == 'ox' then
+                            lib.hideTextUI()
+                        elseif Apartments.DrawText == 'jg' then
+                            exports['jg-textui']:HideText()
+                        end
                     end
                 end
 
                 if IsInsideLogoutZone then
                     if IsControlJustPressed(0, 38) then
                         TriggerEvent('apartments:client:Logout')
-                        exports['qb-core']:HideText()
+                        if Apartments.DrawText == 'qb' then
+                            exports['qb-core']:HideText()
+                        elseif Apartments.DrawText == 'ox' then
+                            lib.hideTextUI()
+                        elseif Apartments.DrawText == 'jg' then
+                            exports['jg-textui']:HideText()
+                        end
                     end
                 end
             end
