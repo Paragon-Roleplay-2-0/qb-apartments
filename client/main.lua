@@ -64,6 +64,7 @@ local function OpenEntranceMenu()
         id = 'entrance_menu',
         title = 'Apartment Entrance',
         canClose = true,
+        position = 'offcenter-right', -- Lation UI
         options = menuOptions
     })
 
@@ -75,6 +76,7 @@ local function OpenExitMenu()
         id = 'exit_menu',
         title = 'Apartment Exit',
         canClose = true,
+        position = 'offcenter-right', -- Lation UI
         options = {
             {
                 title = Lang:t('text.open_door'),
