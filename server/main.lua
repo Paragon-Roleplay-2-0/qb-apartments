@@ -87,7 +87,16 @@ RegisterNetEvent('apartments:server:CreateApartment', function(type, label, firs
         label,
         Player.PlayerData.citizenid
     })
-    TriggerClientEvent('QBCore:Notify', src, Lang:t('success.receive_apart') .. ' (' .. label .. ')')
+    if Apartments.Notify == 'qb' then
+        TriggerClientEvent('QBCore:Notify', src, Lang:t('success.receive_apart') .. ' (' .. label .. ')')
+    elseif Apartments.Notify == 'ox' then
+        TriggerClientEvent('ox_lib:notify', src, {
+            title = 'Apartment Received',
+            description = Lang:t('success.receive_apart') .. ' (' .. label .. ')',
+            position = 'center-right',
+            type = 'success'
+        })
+    end
     if firstSpawn then
         TriggerClientEvent('apartments:client:SpawnInApartment', src, apartmentId, type)
     end
@@ -98,7 +107,16 @@ RegisterNetEvent('apartments:server:UpdateApartment', function(type, label)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     MySQL.update('UPDATE apartments SET type = ?, label = ? WHERE citizenid = ?', { type, label, Player.PlayerData.citizenid })
-    TriggerClientEvent('QBCore:Notify', src, Lang:t('success.changed_apart'))
+    if Apartments.Notify == 'qb' then
+        TriggerClientEvent('QBCore:Notify', src, Lang:t('success.changed_apart'))
+    elseif Apartments.Notify == 'ox' then
+        TriggerClientEvent('ox_lib:notify', src, {
+            title = 'Apartment Changed',
+            description = Lang:t('success.changed_apart'),
+            position = 'center-right',
+            type = 'inform'
+        })
+    end
     TriggerClientEvent("apartments:client:SetHomeBlip", src, type)
     if ox_inventory then
         local result = MySQL.query.await('SELECT * FROM apartments WHERE citizenid = ?', { Player.PlayerData.citizenid })

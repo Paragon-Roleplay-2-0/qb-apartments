@@ -522,7 +522,17 @@ end
 function MenuOwners()
     QBCore.Functions.TriggerCallback('apartments:GetAvailableApartments', function(apartments)
         if next(apartments) == nil then
-            QBCore.Functions.Notify(Lang:t('error.nobody_home'), 'error', 3500)
+            if Apartments.Notify == 'qb' then
+                QBCore.Functions.Notify(Lang:t('error.nobody_home'), 'error', 3500)
+            elseif Apartments.Notify == 'ox' then
+                lib.notify({
+                    title = 'Nobody Home',
+                    description = Lang:t('error.nobody_home'),
+                    duration = 3500,
+                    position = 'center-right',
+                    type = 'error'
+                })
+            end
             CloseMenuFull()
         else
             local menuOptions = {}
@@ -615,7 +625,16 @@ RegisterNetEvent('apartments:client:SpawnInApartment', function(apartmentId, apa
     if RangDoorbell ~= nil then
         local doorbelldist = #(pos - vector3(Apartments.Locations[RangDoorbell].coords.enter.x, Apartments.Locations[RangDoorbell].coords.enter.y, Apartments.Locations[RangDoorbell].coords.enter.z))
         if doorbelldist > 5 then
-            QBCore.Functions.Notify(Lang:t('error.to_far_from_door'))
+            if Apartments.Notify == 'qb' then
+                QBCore.Functions.Notify(Lang:t('error.to_far_from_door'))
+            elseif Apartments.Notify == 'ox' then
+                lib.notify({
+                    title = 'Too Far Away',
+                    description = Lang:t('error.to_far_from_door'),
+                    position = 'center-right',
+                    type = 'error'
+                })
+            end
             return
         end
     end
@@ -663,7 +682,16 @@ end)
 RegisterNetEvent('apartments:client:RingDoor', function(player, _)
     CurrentDoorBell = player
     TriggerServerEvent('InteractSound_SV:PlayOnSource', 'doorbell', 0.1)
-    QBCore.Functions.Notify(Lang:t('info.at_the_door'))
+    if Apartments.Notify == 'qb' then
+        QBCore.Functions.Notify(Lang:t('info.at_the_door'))
+    elseif Apartments.Notify == 'ox' then
+        lib.notify({
+            title = 'Doorbell',
+            description = Lang:t('info.at_the_door'),
+            position = 'center-right',
+            type = 'inform'
+        })
+    end
 end)
 
 RegisterNetEvent('apartments:client:DoorbellMenu', function()
@@ -697,7 +725,16 @@ end)
 
 RegisterNetEvent('apartments:client:OpenDoor', function()
     if CurrentDoorBell == 0 then
-        QBCore.Functions.Notify(Lang:t('error.nobody_at_door'))
+        if Apartments.Notify == 'qb' then
+            QBCore.Functions.Notify(Lang:t('error.nobody_at_door'))
+        elseif Apartments.Notify == 'ox' then
+            lib.notify({
+                title = 'Nobody Home',
+                description = Lang:t('error.nobody_at_door'),
+                position = 'center-right',
+                type = 'error'
+            })
+        end
         return
     end
     TriggerServerEvent('apartments:server:OpenDoor', CurrentDoorBell, CurrentApartment, ClosestHouse)

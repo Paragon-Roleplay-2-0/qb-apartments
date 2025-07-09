@@ -1,5 +1,7 @@
 Apartments = Apartments or {}
 
+Apartments.Notify = 'ox' -- supported: 'ox' or 'qb'
+
 Apartments.DrawText = 'jg' -- supported: 'qb', 'ox', or 'jg'
 
 Apartments.Starting = true

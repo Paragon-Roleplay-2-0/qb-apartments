@@ -1,7 +1,7 @@
 local Translations = {
     error = {
-        to_far_from_door = 'You are to far away from the Doorbell',
-        nobody_home = 'There is nobody home..',
+        to_far_from_door = 'You are too far away from the Doorbell',
+        nobody_home = 'There is nobody home...',
         nobody_at_door = 'There is nobody at the door...'
     },
     success = {
